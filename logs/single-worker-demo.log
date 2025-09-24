@@ -1,0 +1,98 @@
+2025/09/23 20:05:58 INFO Worker started pid=30980 worker_id=worker-1
+2025/09/23 20:05:58 DEBUG Cache operation hit=false key=item_1 worker=worker-1
+2025/09/23 20:06:00 INFO Processing task task_id=2 worker=worker-1
+2025/09/23 20:06:01 INFO Task completed duration_ms=389 task_id=3 worker=worker-1
+2025/09/23 20:06:03 INFO Task completed duration_ms=97 task_id=4 worker=worker-1
+2025/09/23 20:06:04 INFO Metrics cpu=53 memory=352 worker=worker-1
+2025/09/23 20:06:05 DEBUG Cache operation hit=true key=item_6 worker=worker-1
+2025/09/23 20:06:07 INFO Metrics memory=332 worker=worker-1 cpu=33
+2025/09/23 20:06:09 INFO Processing task task_id=8 worker=worker-1
+2025/09/23 20:06:10 DEBUG Cache operation hit=false key=item_9 worker=worker-1
+2025/09/23 20:06:12 INFO Metrics cpu=55 memory=310 worker=worker-1
+2025/09/23 20:06:13 INFO Task completed duration_ms=377 task_id=11 worker=worker-1
+2025/09/23 20:06:17 INFO Processing task task_id=13 worker=worker-1
+2025/09/23 20:06:19 INFO Metrics memory=204 worker=worker-1 cpu=63
+2025/09/23 20:06:20 DEBUG Cache operation hit=false key=item_16 worker=worker-1
+2025/09/23 20:06:24 INFO Metrics cpu=65 memory=316 worker=worker-1
+2025/09/23 20:06:28 INFO Processing task task_id=20 worker=worker-1
+2025/09/23 20:06:30 DEBUG Cache operation key=item_22 worker=worker-1 hit=false
+2025/09/23 20:06:34 INFO Metrics cpu=23 memory=329 worker=worker-1
+2025/09/23 20:06:37 DEBUG Cache operation hit=false key=item_26 worker=worker-1
+2025/09/23 20:06:41 INFO Task completed duration_ms=302 task_id=29 worker=worker-1
+2025/09/23 20:06:45 INFO Metrics cpu=25 memory=255 worker=worker-1
+2025/09/23 20:06:47 INFO Processing task task_id=33 worker=worker-1
+2025/09/23 20:06:50 DEBUG Cache operation hit=false key=item_35 worker=worker-1
+2025/09/23 20:06:51 INFO Metrics memory=149 worker=worker-1 cpu=30
+2025/09/23 20:06:54 DEBUG Cache operation hit=false key=item_39 worker=worker-1
+2025/09/23 20:06:56 DEBUG Cache operation key=item_41 worker=worker-1 hit=true
+2025/09/23 20:06:57 INFO Processing task task_id=42 worker=worker-1
+2025/09/23 20:06:59 DEBUG Cache operation hit=true key=item_44 worker=worker-1
+2025/09/23 20:07:02 INFO Processing task task_id=46 worker=worker-1
+2025/09/23 20:07:06 DEBUG Cache operation hit=false key=item_48 worker=worker-1
+2025/09/23 20:07:08 DEBUG Cache operation hit=false key=item_49 worker=worker-1
+2025/09/23 20:07:12 INFO Task completed duration_ms=231 task_id=51 worker=worker-1
+2025/09/23 20:07:16 INFO Processing task task_id=53 worker=worker-1
+2025/09/23 20:07:16 INFO Metrics cpu=54 memory=228 worker=worker-1
+2025/09/23 20:13:02 INFO Worker started pid=32643 worker_id=worker-1
+2025/09/23 20:13:02 INFO Task completed duration_ms=466 task_id=1 worker=worker-1
+2025/09/23 20:13:03 INFO Task completed duration_ms=93 task_id=2 worker=worker-1
+2025/09/23 20:13:05 INFO Task completed duration_ms=89 task_id=3 worker=worker-1
+2025/09/23 20:13:07 INFO Processing task task_id=4 worker=worker-1
+2025/09/23 20:13:09 INFO Processing task task_id=5 worker=worker-1
+2025/09/23 20:13:11 INFO Metrics cpu=56 memory=157 worker=worker-1
+2025/09/23 20:13:13 INFO Metrics worker=worker-1 cpu=55 memory=384
+2025/09/23 20:13:15 INFO Metrics memory=262 worker=worker-1 cpu=38
+2025/09/23 20:13:15 INFO Worker started pid=32700 worker_id=worker-1
+2025/09/23 20:13:15 INFO Metrics cpu=61 memory=291 worker=worker-1
+2025/09/23 20:13:17 DEBUG Cache operation hit=true key=item_9 worker=worker-1
+2025/09/23 20:13:18 INFO Task completed duration_ms=472 task_id=2 worker=worker-1
+2025/09/23 20:13:18 INFO Processing task task_id=10 worker=worker-1
+2025/09/23 20:13:19 DEBUG Cache operation hit=false key=item_11 worker=worker-1
+2025/09/23 20:13:20 DEBUG Cache operation key=item_3 worker=worker-1 hit=false
+2025/09/23 20:13:21 INFO Processing task task_id=4 worker=worker-1
+2025/09/23 20:13:21 DEBUG Cache operation hit=true key=item_12 worker=worker-1
+2025/09/23 20:13:22 INFO Task completed duration_ms=481 task_id=13 worker=worker-1
+2025/09/23 20:13:23 INFO Metrics cpu=63 memory=343 worker=worker-1
+2025/09/23 20:13:23 INFO Task completed duration_ms=392 task_id=5 worker=worker-1
+2025/09/23 20:13:24 INFO Metrics cpu=38 memory=106 worker=worker-1
+2025/09/23 20:13:25 INFO Metrics cpu=30 memory=136 worker=worker-1
+2025/09/23 20:13:27 INFO Processing task task_id=7 worker=worker-1
+2025/09/23 20:13:29 INFO Metrics cpu=32 memory=290 worker=worker-1
+2025/09/23 20:13:30 INFO Task completed duration_ms=193 task_id=18 worker=worker-1
+2025/09/23 20:13:30 INFO Metrics memory=110 worker=worker-1 cpu=42
+2025/09/23 20:13:31 INFO Metrics cpu=41 memory=207 worker=worker-1
+2025/09/23 20:13:32 DEBUG Cache operation hit=true key=item_10 worker=worker-1
+2025/09/23 20:13:34 INFO Task completed duration_ms=265 task_id=21 worker=worker-1
+2025/09/23 20:13:36 INFO Task completed duration_ms=444 task_id=12 worker=worker-1
+2025/09/23 20:13:37 INFO Metrics cpu=30 memory=137 worker=worker-1
+2025/09/23 20:13:39 INFO Metrics worker=worker-1 cpu=59 memory=253
+2025/09/23 20:13:40 DEBUG Cache operation hit=true key=item_14 worker=worker-1
+2025/09/23 20:13:40 INFO Metrics cpu=57 memory=234 worker=worker-1
+2025/09/23 20:13:42 INFO Metrics cpu=26 memory=111 worker=worker-1
+2025/09/23 20:13:43 INFO Processing task task_id=17 worker=worker-1
+2025/09/23 20:13:44 INFO Processing task task_id=28 worker=worker-1
+2025/09/23 20:13:46 INFO Metrics cpu=21 memory=186 worker=worker-1
+2025/09/23 20:13:47 DEBUG Cache operation hit=true key=item_19 worker=worker-1
+2025/09/23 20:13:48 INFO Metrics cpu=21 memory=384 worker=worker-1
+2025/09/23 20:13:50 INFO Processing task task_id=31 worker=worker-1
+2025/09/23 20:13:51 INFO Metrics memory=374 worker=worker-1 cpu=28
+2025/09/23 20:13:52 INFO Metrics cpu=50 memory=271 worker=worker-1
+2025/09/23 20:13:54 INFO Processing task task_id=34 worker=worker-1
+2025/09/23 20:13:58 INFO Metrics cpu=60 memory=279 worker=worker-1
+2025/09/23 20:14:01 ERROR Task failed error=timeout retries=1 task_id=38 worker=worker-1
+2025/09/23 20:14:04 INFO Processing task task_id=40 worker=worker-1
+2025/09/23 20:14:06 INFO Processing task task_id=42 worker=worker-1
+2025/09/23 20:14:09 INFO Task completed duration_ms=446 task_id=44 worker=worker-1
+2025/09/23 20:14:13 INFO Processing task worker=worker-1 task_id=46
+2025/09/23 20:14:15 INFO Processing task task_id=48 worker=worker-1
+2025/09/23 20:14:18 INFO Processing task task_id=50 worker=worker-1
+2025/09/23 20:14:20 INFO Task completed duration_ms=352 task_id=52 worker=worker-1
+2025/09/23 20:14:24 INFO Task completed task_id=54 worker=worker-1 duration_ms=70
+2025/09/23 20:14:26 INFO Processing task task_id=56 worker=worker-1
+2025/09/23 20:14:28 WARN Performance warning cpu=65 memory_mb=306 worker=worker-1
+2025/09/23 20:14:31 DEBUG Cache operation hit=false key=item_59 worker=worker-1
+2025/09/23 20:14:31 INFO Task completed duration_ms=448 task_id=60 worker=worker-1
+2025/09/23 20:14:35 DEBUG Cache operation key=item_62 worker=worker-1 hit=false
+2025/09/23 20:14:39 INFO Task completed worker=worker-1 duration_ms=453 task_id=64
+2025/09/23 20:14:43 DEBUG Cache operation hit=false key=item_66 worker=worker-1
+2025/09/23 20:14:47 WARN Performance warning cpu=80 memory_mb=290 worker=worker-1
