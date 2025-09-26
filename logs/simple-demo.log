@@ -1,0 +1,111 @@
+2025/09/24 11:23:30 INFO Simple auto app started version=1.0.0 pid=27961
+2025/09/24 11:23:32 INFO Task completed duration_ms=145 task=generating_report task_id=1
+2025/09/24 11:23:34 INFO Task completed task=validating_input task_id=2 duration_ms=347
+2025/09/24 11:23:36 INFO Queue status pending=7 processing=3 completed=3
+2025/09/24 11:23:38 INFO Task started task=cleanup_task task_id=4
+2025/09/24 11:23:40 INFO Task started task=processing_data task_id=5
+2025/09/24 11:23:42 INFO Queue status pending=3 processing=2 completed=6
+2025/09/24 11:23:44 INFO Task completed task=processing_data task_id=7 duration_ms=576
+2025/09/24 11:23:46 INFO System status health=ok uptime_seconds=16 tasks_completed=8
+2025/09/24 11:23:48 DEBUG Performance metrics cpu_usage=40 memory_mb=63 active_tasks=7
+2025/09/24 11:23:50 WARN Task running slow task=validating_input task_id=10 expected_ms=200 actual_ms=858
+2025/09/24 11:23:52 DEBUG Performance metrics cpu_usage=22 memory_mb=107 active_tasks=8
+2025/09/24 11:23:54 DEBUG Performance metrics cpu_usage=36 memory_mb=103 active_tasks=10
+2025/09/24 11:23:56 INFO System status uptime_seconds=26 tasks_completed=13 health=ok
+2025/09/24 11:23:58 INFO Queue status pending=14 processing=1 completed=14
+2025/09/24 11:24:00 INFO Task completed task_id=15 duration_ms=155 task=generating_report
+2025/09/24 11:24:02 INFO Queue status pending=3 processing=2 completed=16
+2025/09/24 11:24:04 INFO System status uptime_seconds=34 tasks_completed=17 health=ok
+2025/09/24 11:24:06 INFO Task started task=validating_input task_id=18
+2025/09/24 11:24:08 INFO System status health=ok uptime_seconds=38 tasks_completed=19
+2025/09/24 11:24:10 INFO Task completed task=validating_input task_id=20 duration_ms=433
+2025/09/24 11:24:12 INFO Task completed task=sending_notification task_id=21 duration_ms=263
+2025/09/24 11:24:14 INFO Heartbeat timestamp=11:24:14 active=true tasks_total=22
+2025/09/24 11:24:16 INFO Heartbeat timestamp=11:24:16 active=true tasks_total=23
+2025/09/24 11:24:18 INFO Task completed task=processing_data task_id=24 duration_ms=571
+2025/09/24 11:24:20 INFO Task started task=processing_data task_id=25
+2025/09/24 11:24:22 INFO Task started task=sending_notification task_id=26
+2025/09/24 11:24:24 INFO Task started task=sending_notification task_id=27
+2025/09/24 11:24:26 INFO Task completed task=sending_notification task_id=28 duration_ms=417
+2025/09/24 11:24:28 INFO System status health=ok uptime_seconds=58 tasks_completed=29
+2025/09/24 11:24:30 INFO System status uptime_seconds=60 tasks_completed=30 health=ok
+2025/09/24 11:24:32 WARN Task running slow task=generating_report task_id=31 expected_ms=200 actual_ms=593
+2025/09/24 11:24:34 DEBUG Performance metrics active_tasks=9 cpu_usage=24 memory_mb=82
+2025/09/24 11:24:36 INFO Queue status pending=7 processing=1 completed=33
+2025/09/24 11:24:38 DEBUG Performance metrics memory_mb=143 active_tasks=2 cpu_usage=51
+2025/09/24 11:24:40 INFO Task completed task=processing_data task_id=35 duration_ms=440
+2025/09/24 11:24:42 INFO System status health=ok uptime_seconds=72 tasks_completed=36
+2025/09/24 11:24:44 INFO Task started task=generating_report task_id=37
+2025/09/24 11:24:46 INFO System status uptime_seconds=76 tasks_completed=38 health=ok
+2025/09/24 11:24:48 INFO Heartbeat timestamp=11:24:48 active=true tasks_total=39
+2025/09/24 11:24:50 INFO System status uptime_seconds=80 tasks_completed=40 health=ok
+2025/09/24 11:24:52 INFO Task started task_id=41 task=sending_notification
+2025/09/24 11:24:54 INFO Queue status pending=9 processing=3 completed=42
+2025/09/24 11:24:56 INFO Queue status processing=1 completed=43 pending=7
+2025/09/24 11:24:58 INFO Queue status pending=5 processing=4 completed=44
+2025/09/24 11:25:00 INFO Task started task=processing_data task_id=45
+2025/09/24 11:25:02 INFO System status uptime_seconds=92 tasks_completed=46 health=ok
+2025/09/24 11:25:04 INFO Queue status pending=8 processing=2 completed=47
+2025/09/24 11:25:06 INFO System status uptime_seconds=96 tasks_completed=48 health=ok
+2025/09/24 11:25:08 INFO Task started task=processing_data task_id=49
+2025/09/24 11:25:10 INFO Queue status pending=15 processing=3 completed=50
+2025/09/24 11:25:12 INFO Task started task=processing_data task_id=51
+2025/09/24 11:25:14 WARN Task running slow actual_ms=1200 task=generating_report task_id=52 expected_ms=200
+2025/09/24 11:25:16 INFO Task completed task=processing_data task_id=53 duration_ms=524
+2025/09/24 11:25:18 INFO Task started task=sending_notification task_id=54
+2025/09/24 11:25:20 INFO Queue status completed=55 pending=10 processing=0
+2025/09/24 11:25:22 INFO Task started task=cleanup_task task_id=56
+2025/09/24 11:25:24 WARN Task running slow actual_ms=850 task=validating_input task_id=57 expected_ms=200
+2025/09/24 11:25:26 DEBUG Performance metrics cpu_usage=46 memory_mb=113 active_tasks=5
+2025/09/24 11:25:28 INFO Task completed task=processing_data task_id=59 duration_ms=405
+2025/09/24 11:25:30 INFO Task started task=generating_report task_id=60
+2025/09/24 11:25:32 INFO Task started task=sending_notification task_id=61
+2025/09/24 11:25:34 INFO System status uptime_seconds=124 tasks_completed=62 health=ok
+2025/09/24 11:25:36 DEBUG Performance metrics cpu_usage=39 memory_mb=74 active_tasks=2
+2025/09/24 11:25:38 WARN Task running slow task_id=64 expected_ms=200 actual_ms=579 task=generating_report
+2025/09/24 11:25:40 INFO System status uptime_seconds=130 tasks_completed=65 health=ok
+2025/09/24 11:25:42 INFO System status uptime_seconds=132 tasks_completed=66 health=ok
+2025/09/24 11:25:44 DEBUG Performance metrics active_tasks=3 cpu_usage=39 memory_mb=120
+2025/09/24 11:25:46 DEBUG Performance metrics active_tasks=6 cpu_usage=26 memory_mb=112
+2025/09/24 11:25:48 DEBUG Performance metrics cpu_usage=32 memory_mb=105 active_tasks=9
+2025/09/24 11:25:50 INFO Task completed task=validating_input task_id=70 duration_ms=280
+2025/09/24 11:25:52 INFO Heartbeat timestamp=11:25:52 active=true tasks_total=71
+2025/09/24 11:25:54 INFO System status uptime_seconds=144 tasks_completed=72 health=ok
+2025/09/24 11:25:56 INFO Queue status pending=18 processing=2 completed=73
+2025/09/24 11:25:58 INFO Task completed task=cleanup_task task_id=74 duration_ms=222
+2025/09/24 11:26:00 INFO System status health=ok uptime_seconds=150 tasks_completed=75
+2025/09/24 11:26:02 DEBUG Performance metrics cpu_usage=33 memory_mb=73 active_tasks=3
+2025/09/24 11:26:04 INFO Queue status pending=5 processing=0 completed=77
+2025/09/24 11:26:06 INFO Queue status pending=4 processing=3 completed=78
+2025/09/24 11:26:08 INFO Heartbeat timestamp=11:26:08 active=true tasks_total=79
+2025/09/24 11:26:10 DEBUG Performance metrics cpu_usage=46 memory_mb=141 active_tasks=4
+2025/09/24 11:26:12 DEBUG Performance metrics cpu_usage=58 memory_mb=121 active_tasks=5
+2025/09/24 11:26:14 INFO Heartbeat timestamp=11:26:14 active=true tasks_total=82
+2025/09/24 11:26:16 INFO Task completed task=processing_data task_id=83 duration_ms=261
+2025/09/24 11:26:18 INFO Task completed task=generating_report task_id=84 duration_ms=357
+2025/09/24 11:26:20 INFO Queue status pending=6 processing=1 completed=85
+2025/09/24 11:26:22 INFO Task completed task=sending_notification task_id=86 duration_ms=180
+2025/09/24 11:26:24 INFO Task started task=processing_data task_id=87
+2025/09/24 11:26:26 INFO Task started task=processing_data task_id=88
+2025/09/24 11:26:28 DEBUG Performance metrics active_tasks=9 cpu_usage=24 memory_mb=120
+2025/09/24 11:26:30 INFO Heartbeat timestamp=11:26:30 active=true tasks_total=90
+2025/09/24 11:26:32 INFO Heartbeat timestamp=11:26:32 active=true tasks_total=91
+2025/09/24 11:26:34 INFO Queue status pending=2 processing=3 completed=92
+2025/09/24 11:26:36 INFO System status health=ok uptime_seconds=186 tasks_completed=93
+2025/09/24 11:26:38 DEBUG Performance metrics cpu_usage=50 memory_mb=64 active_tasks=9
+2025/09/24 11:26:40 INFO Heartbeat timestamp=11:26:40 active=true tasks_total=95
+2025/09/24 11:26:42 INFO Task started task=validating_input task_id=96
+2025/09/24 11:26:44 INFO Queue status pending=17 processing=2 completed=97
+2025/09/24 11:26:46 INFO Task completed task=sending_notification task_id=98 duration_ms=296
+2025/09/24 11:26:48 INFO Queue status pending=11 processing=4 completed=99
+2025/09/24 11:26:50 INFO Heartbeat tasks_total=100 timestamp=11:26:50 active=true
+2025/09/24 11:26:52 DEBUG Performance metrics cpu_usage=56 memory_mb=147 active_tasks=8
+2025/09/24 11:26:54 INFO Task completed task=updating_cache task_id=102 duration_ms=149
+2025/09/24 11:26:56 INFO Task started task=cleanup_task task_id=103
+2025/09/24 11:26:58 INFO Task completed task=cleanup_task task_id=104 duration_ms=296
+2025/09/24 11:27:00 DEBUG Performance metrics cpu_usage=51 memory_mb=56 active_tasks=5
+2025/09/24 11:27:02 DEBUG Performance metrics cpu_usage=52 memory_mb=135 active_tasks=1
+2025/09/24 11:27:04 INFO Queue status pending=7 processing=1 completed=107
+2025/09/24 11:27:06 DEBUG Performance metrics cpu_usage=34 memory_mb=60 active_tasks=5
+2025/09/24 11:27:08 INFO Task started task=processing_data task_id=109
+2025/09/24 11:27:08 INFO Simple auto app stopping

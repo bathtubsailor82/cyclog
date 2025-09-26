@@ -4,12 +4,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/signal"
+	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
 	"time"
 
 	charmlog "github.com/charmbracelet/log"
+	"github.com/fsnotify/fsnotify"
 	"gopkg.in/yaml.v3"
 )
 
@@ -36,6 +39,27 @@ type CycLogger struct {
 	buffer      *CircularBuffer  // Buffer centralisé pour historique
 	listeners   []chan LogEntry  // Lecteurs temps réel connectés
 	mutex       sync.RWMutex
+	
+	// Multi-pipe support
+	watcher     *fsnotify.Watcher
+	pipeSessions map[string]*pipeSession  // Track active pipe sessions
+	stopChan    chan bool
+	
+	// Session info for auto cleanup
+	appName     string
+	mainPID     int
+	isMainApp   bool  // True if this is the main app (not producer)
+	collector   *CycLogger  // Reference to background collector
+	watchPattern string                   // Pattern to watch for pipes
+}
+
+// pipeSession represents an active pipe listening session
+type pipeSession struct {
+	pipePath   string
+	stopChan   chan bool
+	isActive   bool
+	moduleName string
+	modulePID  int
 }
 
 // ConsoleWriter outputs to console using charmbracelet/log
@@ -608,7 +632,416 @@ func NewStandalone(config Config) *CycLogger {
 	return cyclog
 }
 
-// NewSmartLogger creates a logger with automatic detection of execution context
+// AppMode defines the application execution mode
+type AppMode int
+
+const (
+	InteractiveMode AppMode = iota // App keeps terminal (default)
+	DaemonMode                     // App runs in background, returns terminal
+)
+
+// AutoConfig represents configuration for auto CycLog integration
+type AutoConfig struct {
+	AppName string
+	Mode    AppMode
+}
+
+// NewAutoApp creates a logger with automatic CycLog integration (Interactive mode)
+// Handles --logstreamer and other CycLog flags automatically
+func NewAutoApp(appName string) *CycLogger {
+	return NewAutoAppWithConfig(AutoConfig{
+		AppName: appName,
+		Mode:    InteractiveMode,
+	})
+}
+
+// NewAutoDaemon creates a logger in daemon mode (returns terminal immediately)
+func NewAutoDaemon(appName string) *CycLogger {
+	return NewAutoAppWithConfig(AutoConfig{
+		AppName: appName,
+		Mode:    DaemonMode,
+	})
+}
+
+// NewAutoAppWithConfig creates a logger with specific configuration
+func NewAutoAppWithConfig(config AutoConfig) *CycLogger {
+	// Check for CycLog control flags first
+	if handleCycLogFlags(config.AppName) {
+		// CycLog took control (--logstreamer, etc.), app should exit
+		os.Exit(0)
+	}
+	
+	// Check if parent provided a pipe path (legacy worker mode)
+	if pipePath := os.Getenv("CYCLOG_PIPE"); pipePath != "" {
+		// Producer mode: send logs to parent via pipe
+		return NewProducer(pipePath)
+	}
+	
+	// CORE LOGIC: Check if session exists
+	if session, err := ReadSession(config.AppName); err == nil {
+		// SESSION EXISTS → PRODUCER MODE (child/worker process)
+		return setupProducerMode(session, config.AppName)
+	} else {
+		// NO SESSION → MAIN APP MODE (create full CycLog service)
+		return setupMainAppMode(config)
+	}
+}
+
+// setupProducerMode sets up producer mode for child processes
+func setupProducerMode(session *Session, appName string) *CycLogger {
+	// Child process mode: create producer with new naming
+	moduleName := "module" // Generic module name
+	modulePID := os.Getpid()
+	pipePath := GetPipePathNew(session.MainPID, session.AppName, moduleName, modulePID)
+	
+	// Create the named pipe
+	if _, err := os.Stat(pipePath); os.IsNotExist(err) {
+		syscall.Mkfifo(pipePath, 0666)
+	}
+	
+	// Return producer that sends to this pipe
+	return NewProducer(pipePath)
+}
+
+// setupMainAppMode sets up main application mode (full CycLog service)
+func setupMainAppMode(config AutoConfig) *CycLogger {
+	mainPID := os.Getpid()
+	
+	// Create session for child processes
+	CreateSession(config.AppName, mainPID)
+	
+	// Create main app's own pipe (like everyone else!)
+	mainPipePath := GetPipePathNew(mainPID, config.AppName, "main", mainPID)
+	if _, err := os.Stat(mainPipePath); os.IsNotExist(err) {
+		syscall.Mkfifo(mainPipePath, 0666)
+	}
+	
+	// Print mode-specific startup message
+	switch config.Mode {
+	case DaemonMode:
+		fmt.Printf("◉ %s daemon started (PID: %d)\n", config.AppName, mainPID)
+		fmt.Printf("⚡ Logs: go run . --logstreamer\n")
+		fmt.Printf("◐ Status: go run . --log-status\n")
+	case InteractiveMode:
+		// No startup message for interactive (app will handle its own output)
+	}
+	
+	// Create collector configuration
+	var collectorConfig Config
+	switch config.Mode {
+	case DaemonMode:
+		collectorConfig = Config{
+			Console: false, // Daemon: no console output
+			File:    fmt.Sprintf("logs/%s.log", config.AppName),
+		}
+	case InteractiveMode:
+		collectorConfig = Config{
+			Console: true, // Interactive: show basic console logs
+			File:    fmt.Sprintf("logs/%s.log", config.AppName),
+		}
+	default:
+		collectorConfig = Config{Console: true}
+	}
+	
+	// Create collector (the CycLog service)
+	collector := NewCollector(collectorConfig)
+	
+	// Start multi-pipe watcher (will discover main + child pipes)
+	go func() {
+		collector.StartMultiPipeWatcher(mainPID, config.AppName)
+	}()
+	
+	// Return a producer for main app to use (not the collector directly)
+	producer := NewProducer(mainPipePath)
+	
+	// Set session info for auto cleanup
+	producer.appName = config.AppName
+	producer.mainPID = mainPID
+	producer.isMainApp = true
+	producer.collector = collector  // Store reference for cleanup
+	
+	return producer
+}
+
+
+// handleCycLogFlags checks for CycLog control flags and handles them
+// Returns true if CycLog took control, false if app should continue normally
+func handleCycLogFlags(appName string) bool {
+	for _, arg := range os.Args[1:] {
+		switch arg {
+		case "--logstreamer", "--log-stream":
+			startLogStreamer(appName)
+			return true
+		case "--log-status":
+			showLogStatus(appName)
+			return true
+		case "--log-cleanup":
+			cleanupLogFiles(appName)
+			return true
+		case "--log-help":
+			showCycLogHelp()
+			return true
+		}
+	}
+	return false
+}
+
+// startLogStreamer starts the integrated log streamer
+func startLogStreamer(appName string) {
+	fmt.Println("⚡ CycLog Real-time Streamer")
+	fmt.Printf("Connecting to app: %s\n", appName)
+	fmt.Println("───────────────────────────────────────")
+	
+	// Try to find session
+	session, err := ReadSession(appName)
+	if err != nil {
+		fmt.Printf("✗ No active session found for app: %s\n", appName)
+		fmt.Println("⚠ Make sure the main app is running first")
+		return
+	}
+	
+	fmt.Printf("✓ Found session: %d_%s\n", session.MainPID, session.AppName)
+	
+	// Create charmbracelet logger for beautiful output
+	logger := charmlog.NewWithOptions(os.Stdout, charmlog.Options{
+		ReportTimestamp: true,
+		TimeFormat:      "15:04:05",
+		Level:           charmlog.DebugLevel,
+	})
+	
+	// Display buffer history first
+	bufferPath := GetBufferPathFromConfig(Config{PipeName: session.AppName})
+	displayBufferHistory(logger, bufferPath)
+	
+	// Start real-time streaming
+	fmt.Println("--- End of history, starting real-time stream ---")
+	
+	// Create a collector to listen to existing multi-pipe session
+	collector := NewCollector(Config{Console: false})
+	
+	// Start multi-pipe watcher for this session
+	err = collector.StartMultiPipeWatcher(session.MainPID, session.AppName)
+	if err != nil {
+		fmt.Printf("✗ Failed to start multi-pipe watcher: %v\n", err)
+		return
+	}
+	
+	// Attach real-time reader
+	readerChan := collector.AttachReader()
+	
+	fmt.Printf("◉ Real-time streaming active for %d_%s\n", session.MainPID, session.AppName)
+	fmt.Println("⚠ Press Ctrl+C to stop")
+	fmt.Println("───────────────────────────────────────")
+	
+	// Handle shutdown
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	
+	// Monitor main process status
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+	
+	// Display real-time logs
+	done := false
+	for !done {
+		select {
+		case entry := <-readerChan:
+			displayLogEntryInternal(logger, entry)
+		case <-c:
+			fmt.Println("\n⬛ Stopping streamer...")
+			done = true
+		case <-ticker.C:
+			// Check if main process is still alive
+			if process, err := os.FindProcess(session.MainPID); err == nil {
+				if err := process.Signal(syscall.Signal(0)); err != nil {
+					fmt.Printf("\n◯ Main process (PID: %d) has terminated\n", session.MainPID)
+					fmt.Println("⬛ Stopping streamer...")
+					done = true
+				}
+			}
+		}
+	}
+	
+	// Explicit cleanup with timeout
+	cleanupDone := make(chan bool, 1)
+	go func() {
+		collector.StopMultiPipeWatcher()
+		collector.Close()
+		cleanupDone <- true
+	}()
+	
+	select {
+	case <-cleanupDone:
+		// Cleanup completed
+	case <-time.After(2 * time.Second):
+		fmt.Println("⚠ Cleanup timeout, forcing exit")
+	}
+}
+
+// displayBufferHistory displays buffer history (internal function)
+func displayBufferHistory(logger *charmlog.Logger, bufferPath string) {
+	data, err := os.ReadFile(bufferPath)
+	if err != nil {
+		fmt.Printf("◯ No buffer history found (%s)\n", bufferPath)
+		return
+	}
+	
+	lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+	if len(lines) == 0 || (len(lines) == 1 && lines[0] == "") {
+		fmt.Println("◯ Buffer is empty")
+		return
+	}
+	
+	fmt.Printf("◐ Found %d entries in buffer history:\n", len(lines))
+	
+	for _, line := range lines {
+		if line != "" {
+			var entry LogEntry
+			if json.Unmarshal([]byte(line), &entry) == nil {
+				displayLogEntryInternal(logger, entry)
+			}
+		}
+	}
+}
+
+// displayLogEntryInternal displays a log entry (internal function)
+func displayLogEntryInternal(logger *charmlog.Logger, entry LogEntry) {
+	// Convert fields back to slice for charmbracelet
+	var fields []interface{}
+	for key, value := range entry.Fields {
+		fields = append(fields, key, value)
+	}
+	
+	// Add source information if available
+	if entry.Source != "" {
+		fields = append(fields, "source", entry.Source)
+	}
+	
+	// Display with appropriate level
+	switch strings.ToUpper(entry.Level) {
+	case "DEBUG":
+		logger.Debug(entry.Message, fields...)
+	case "INFO":
+		logger.Info(entry.Message, fields...)
+	case "WARN", "WARNING":
+		logger.Warn(entry.Message, fields...)
+	case "ERROR":
+		logger.Error(entry.Message, fields...)
+	case "FATAL":
+		logger.Fatal(entry.Message, fields...)
+	default:
+		logger.Info(entry.Message, fields...)
+	}
+}
+
+// showLogStatus shows information about active CycLog sessions
+func showLogStatus(appName string) {
+	fmt.Println("◉ CycLog Status")
+	fmt.Printf("App: %s\n", appName)
+	fmt.Println("───────────────────────────────────────")
+	
+	// Try to find session
+	session, err := ReadSession(appName)
+	if err != nil {
+		fmt.Printf("◯ No active session found for app: %s\n", appName)
+		return
+	}
+	
+	fmt.Printf("✓ Active session: %d_%s\n", session.MainPID, session.AppName)
+	
+	// List active pipes
+	pattern := fmt.Sprintf("/tmp/%d_%s_*.fifo", session.MainPID, session.AppName)
+	matches, err := filepath.Glob(pattern)
+	if err == nil && len(matches) > 0 {
+		fmt.Printf("◉ Active pipes (%d):\n", len(matches))
+		for _, pipePath := range matches {
+			fmt.Printf("  → %s\n", filepath.Base(pipePath))
+		}
+	} else {
+		fmt.Println("◯ No active pipes found")
+	}
+	
+	// Check buffer
+	bufferPath := GetBufferPathFromConfig(Config{PipeName: session.AppName})
+	if info, err := os.Stat(bufferPath); err == nil {
+		fmt.Printf("◐ Buffer: %s (size: %d bytes)\n", bufferPath, info.Size())
+	} else {
+		fmt.Printf("◯ No buffer found: %s\n", bufferPath)
+	}
+}
+
+// cleanupLogFiles cleans up orphaned CycLog files
+func cleanupLogFiles(appName string) {
+	fmt.Println("⟲ CycLog Cleanup")
+	fmt.Printf("App: %s\n", appName)
+	fmt.Println("───────────────────────────────────────")
+	
+	// Try to find session
+	session, err := ReadSession(appName)
+	if err != nil {
+		fmt.Printf("◯ No active session found for app: %s\n", appName)
+		return
+	}
+	
+	fmt.Printf("⚠ This will clean up session: %d_%s\n", session.MainPID, session.AppName)
+	fmt.Print("Continue? [y/N]: ")
+	
+	var response string
+	fmt.Scanln(&response)
+	if strings.ToLower(response) != "y" {
+		fmt.Println("◯ Cleanup cancelled")
+		return
+	}
+	
+	// Clean up pipes
+	pattern := fmt.Sprintf("/tmp/%d_%s_*.fifo", session.MainPID, session.AppName)
+	matches, err := filepath.Glob(pattern)
+	if err == nil {
+		for _, pipePath := range matches {
+			os.Remove(pipePath)
+			fmt.Printf("✓ Removed pipe: %s\n", filepath.Base(pipePath))
+		}
+	}
+	
+	// Clean up session
+	CleanupSession(session.MainPID, session.AppName)
+	fmt.Printf("✓ Removed session: %d_%s\n", session.MainPID, session.AppName)
+	
+	// Clean up buffer
+	bufferPath := GetBufferPathFromConfig(Config{PipeName: session.AppName})
+	if _, err := os.Stat(bufferPath); err == nil {
+		os.Remove(bufferPath)
+		fmt.Printf("✓ Removed buffer: %s\n", filepath.Base(bufferPath))
+	}
+	
+	fmt.Println("✓ Cleanup completed")
+}
+
+// showCycLogHelp shows CycLog-specific help
+func showCycLogHelp() {
+	fmt.Println("◉ CycLog Integration Help")
+	fmt.Println("═══════════════════════════════════════")
+	fmt.Println("CycLog flags available in any app:")
+	fmt.Println()
+	fmt.Println("  --logstreamer    Start real-time log viewer")
+	fmt.Println("  --log-stream     Alias for --logstreamer")
+	fmt.Println("  --log-status     Show active sessions and pipes")
+	fmt.Println("  --log-cleanup    Clean up orphaned log files")
+	fmt.Println("  --log-help       Show this help")
+	fmt.Println()
+	fmt.Println("Usage examples:")
+	fmt.Println("  ./myapp                    # Run app normally")
+	fmt.Println("  ./myapp --logstreamer      # View real-time logs")
+	fmt.Println("  ./myapp --log-status       # Check log status")
+	fmt.Println()
+	fmt.Println("CycLog automatically handles:")
+	fmt.Println("  ✓ Multi-module log collection")
+	fmt.Println("  ✓ Real-time streaming with history")
+	fmt.Println("  ✓ Session management")
+	fmt.Println("  ✓ Pipe auto-discovery")
+}
+
+// NewSmartLogger creates a logger with automatic detection of execution context (legacy)
 func NewSmartLogger(appName string) *CycLogger {
 	// Check if parent provided a pipe path
 	if pipePath := os.Getenv("CYCLOG_PIPE"); pipePath != "" {
@@ -639,7 +1072,7 @@ func getAutoLogFile(appName string) string {
 	return fmt.Sprintf("logs/%s_%s_%d.log", timestamp, appName, pid)
 }
 
-// GetPipePath returns the pipe path for a given config
+// GetPipePath returns the pipe path for a given config (legacy)
 func GetPipePath(config Config) string {
 	if config.PipePath != "" {
 		return config.PipePath
@@ -650,10 +1083,323 @@ func GetPipePath(config Config) string {
 	return "/tmp/cyclog.fifo" // Default
 }
 
-// StartListening starts collecting logs from the pipe
+// GetPipePathNew returns pipe path with new naming convention
+// Format: {MainPID}_{app}_{module}_{modulePID}.fifo
+func GetPipePathNew(mainPID int, appName, moduleName string, modulePID int) string {
+	return fmt.Sprintf("/tmp/%d_%s_%s_%d.fifo", mainPID, appName, moduleName, modulePID)
+}
+
+// === SESSION MANAGEMENT ===
+
+// Session represents a CycLog session for sharing config between processes
+type Session struct {
+	MainPID int    `json:"main_pid"`
+	AppName string `json:"app_name"`
+}
+
+// GetSessionPath returns the session file path
+func GetSessionPath(mainPID int, appName string) string {
+	return fmt.Sprintf("/tmp/.cyclog_session_%d_%s", mainPID, appName)
+}
+
+// CreateSession creates a session file for child processes to discover
+func CreateSession(appName string, mainPID int) error {
+	session := Session{
+		MainPID: mainPID,
+		AppName: appName,
+	}
+	
+	data, err := json.Marshal(session)
+	if err != nil {
+		return fmt.Errorf("failed to marshal session: %v", err)
+	}
+	
+	sessionPath := GetSessionPath(mainPID, appName)
+	err = os.WriteFile(sessionPath, data, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to write session file %s: %v", sessionPath, err)
+	}
+	
+	return nil
+}
+
+// ReadSession reads session information from file
+func ReadSession(appName string) (*Session, error) {
+	// Try to find session file by scanning /tmp
+	pattern := fmt.Sprintf("/tmp/.cyclog_session_*_%s", appName)
+	matches, err := filepath.Glob(pattern)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search for session files: %v", err)
+	}
+	
+	fmt.Printf("🔍 Debug: Searching for session with pattern: %s\n", pattern)
+	fmt.Printf("🔍 Debug: Found %d session files: %v\n", len(matches), matches)
+	
+	if len(matches) == 0 {
+		return nil, fmt.Errorf("no session found for app %s", appName)
+	}
+	
+	// Use the first match (most recent session)
+	sessionPath := matches[0]
+	fmt.Printf("🔍 Debug: Using session file: %s\n", sessionPath)
+	data, err := os.ReadFile(sessionPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read session file %s: %v", sessionPath, err)
+	}
+	
+	var session Session
+	err = json.Unmarshal(data, &session)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal session: %v", err)
+	}
+	
+	return &session, nil
+}
+
+// CleanupSession removes the session file
+func CleanupSession(mainPID int, appName string) error {
+	sessionPath := GetSessionPath(mainPID, appName)
+	return os.Remove(sessionPath)
+}
+
+// StartListening starts collecting logs from the pipe (legacy single-pipe)
 func (c *CycLogger) StartListening(pipePath string) error {
 	// Create the listening pipe infrastructure 
 	return c.startPipeListener(pipePath)
+}
+
+// StartMultiPipeWatcher starts watching for multiple pipes with pattern
+// Pattern format: {MainPID}_{appName}_*.fifo
+func (c *CycLogger) StartMultiPipeWatcher(mainPID int, appName string) error {
+	var err error
+	
+	// Initialize multi-pipe structures
+	c.pipeSessions = make(map[string]*pipeSession)
+	c.stopChan = make(chan bool)
+	c.watchPattern = fmt.Sprintf("%d_%s_", mainPID, appName)
+	
+	// Create fsnotify watcher
+	c.watcher, err = fsnotify.NewWatcher()
+	if err != nil {
+		return fmt.Errorf("failed to create fsnotify watcher: %v", err)
+	}
+	
+	// Watch /tmp directory for new pipes
+	err = c.watcher.Add("/tmp")
+	if err != nil {
+		c.watcher.Close()
+		return fmt.Errorf("failed to watch /tmp directory: %v", err)
+	}
+	
+	// Scan for existing pipes matching pattern
+	err = c.scanExistingPipes()
+	if err != nil {
+		c.watcher.Close()
+		return fmt.Errorf("failed to scan existing pipes: %v", err)
+	}
+	
+	// Start the watcher goroutine
+	go c.watchForNewPipes()
+	
+	return nil
+}
+
+// scanExistingPipes scans for existing pipes matching the pattern
+func (c *CycLogger) scanExistingPipes() error {
+	pattern := fmt.Sprintf("/tmp/%s*.fifo", c.watchPattern)
+	matches, err := filepath.Glob(pattern)
+	if err != nil {
+		return err
+	}
+	
+	for _, pipePath := range matches {
+		c.handleNewPipe(pipePath)
+	}
+	
+	return nil
+}
+
+// watchForNewPipes watches for filesystem events and handles new pipes
+func (c *CycLogger) watchForNewPipes() {
+	for {
+		select {
+		case event, ok := <-c.watcher.Events:
+			if !ok {
+				return
+			}
+			
+			if event.Op&fsnotify.Create == fsnotify.Create {
+				// Check if it's a pipe matching our pattern
+				if c.isPipeMatch(event.Name) {
+					c.handleNewPipe(event.Name)
+				}
+			}
+			
+		case err, ok := <-c.watcher.Errors:
+			if !ok {
+				return
+			}
+			// Log error but continue watching
+			fmt.Printf("⚠ Multi-pipe watcher error: %v\n", err)
+			
+		case <-c.stopChan:
+			return
+		}
+	}
+}
+
+// isPipeMatch checks if a file matches our pipe pattern
+func (c *CycLogger) isPipeMatch(filepath string) bool {
+	filename := filepath[strings.LastIndex(filepath, "/")+1:]
+	return strings.HasPrefix(filename, c.watchPattern) && strings.HasSuffix(filename, ".fifo")
+}
+
+// handleNewPipe starts listening to a newly discovered pipe
+func (c *CycLogger) handleNewPipe(pipePath string) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	
+	// Check if we're already handling this pipe
+	if session, exists := c.pipeSessions[pipePath]; exists && session.isActive {
+		return
+	}
+	
+	// Parse pipe name to extract module info
+	moduleName, modulePID := c.parsePipeName(pipePath)
+	
+	// Create new pipe session
+	session := &pipeSession{
+		pipePath:   pipePath,
+		stopChan:   make(chan bool),
+		isActive:   true,
+		moduleName: moduleName,
+		modulePID:  modulePID,
+	}
+	
+	c.pipeSessions[pipePath] = session
+	
+	// Start listening to this pipe in a goroutine
+	go c.listenToPipeSession(session)
+	
+	fmt.Printf("◉ Started listening to pipe: %s (module: %s, PID: %d)\n", pipePath, moduleName, modulePID)
+}
+
+// parsePipeName extracts module name and PID from pipe path
+// Format: /tmp/{MainPID}_{appName}_{moduleName}_{modulePID}.fifo
+func (c *CycLogger) parsePipeName(pipePath string) (string, int) {
+	filename := filepath.Base(pipePath)
+	// Remove .fifo extension
+	filename = strings.TrimSuffix(filename, ".fifo")
+	
+	// Split by underscores: [MainPID, appName, moduleName, modulePID]
+	parts := strings.Split(filename, "_")
+	if len(parts) >= 4 {
+		moduleName := parts[2]
+		modulePID := 0
+		fmt.Sscanf(parts[3], "%d", &modulePID)
+		return moduleName, modulePID
+	}
+	
+	return "unknown", 0
+}
+
+// listenToPipeSession listens to a specific pipe session
+func (c *CycLogger) listenToPipeSession(session *pipeSession) {
+	defer func() {
+		c.mutex.Lock()
+		session.isActive = false
+		c.mutex.Unlock()
+		fmt.Printf("◯ Stopped listening to pipe: %s\n", session.pipePath)
+	}()
+	
+	for {
+		select {
+		case <-session.stopChan:
+			return
+		default:
+			// Try to connect to pipe
+			pipe, err := os.OpenFile(session.pipePath, os.O_RDONLY, 0)
+			if err != nil {
+				// Pipe not available yet, wait patiently
+				time.Sleep(1 * time.Second)
+				continue
+			}
+			
+			// Create JSON decoder for pipe
+			decoder := json.NewDecoder(pipe)
+			
+			// Listen for log entries (blocking read)
+			for {
+				select {
+				case <-session.stopChan:
+					pipe.Close()
+					return
+				default:
+					var entry LogEntry
+					if err := decoder.Decode(&entry); err != nil {
+						// Pipe closed - writer disconnected, try to reconnect
+						pipe.Close()
+						goto reconnect
+					}
+					
+					// Enrich entry with source information
+					entry.Source = fmt.Sprintf("%s_%d", session.moduleName, session.modulePID)
+					
+					// 1. Add to central buffer first
+					if c.buffer != nil {
+						c.buffer.Add(entry)
+					}
+					
+					// 2. Notify all connected readers
+					c.notifyListeners(entry)
+					
+					// 3. Dispatch to all writers of this collector
+					c.mutex.RLock()
+					for _, writer := range c.writers {
+						writer.Write(entry)
+					}
+					c.mutex.RUnlock()
+				}
+			}
+			
+		reconnect:
+			// Brief pause before reconnection attempt
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+}
+
+// StopMultiPipeWatcher stops the multi-pipe watcher and all sessions
+func (c *CycLogger) StopMultiPipeWatcher() error {
+	if c.watcher == nil {
+		return nil
+	}
+	
+	// Stop the main watcher (protect against double close)
+	select {
+	case <-c.stopChan:
+		// Already closed
+	default:
+		close(c.stopChan)
+	}
+	
+	// Stop all pipe sessions
+	c.mutex.Lock()
+	for _, session := range c.pipeSessions {
+		if session.isActive {
+			select {
+			case <-session.stopChan:
+				// Already closed
+			default:
+				close(session.stopChan)
+			}
+			session.isActive = false
+		}
+	}
+	c.mutex.Unlock()
+	
+	// Close the fsnotify watcher
+	return c.watcher.Close()
 }
 
 // startPipeListener creates and listens to the named pipe
@@ -744,42 +1490,62 @@ func (c *CycLogger) notifyListeners(entry LogEntry) {
 // listenToPipe reads from the pipe and dispatches to writers
 func (c *CycLogger) listenToPipe(pipePath string) {
 	for {
-		// Patient connection - wait for pipe to become available
-		pipe, err := os.OpenFile(pipePath, os.O_RDONLY, 0)
-		if err != nil {
-			// Pipe not available yet, wait patiently
-			time.Sleep(1 * time.Second)
-			continue
-		}
-		
-		// Create JSON decoder for pipe
-		decoder := json.NewDecoder(pipe)
-		
-		// Listen for log entries (blocking read)
-		for {
-			var entry LogEntry
-			if err := decoder.Decode(&entry); err != nil {
-				// Pipe closed - writer disconnected, wait for reconnection
-				pipe.Close()
-				break // Try to reconnect
+		select {
+		case <-c.stopChan:
+			return
+		default:
+			// Patient connection - wait for pipe to become available
+			pipe, err := os.OpenFile(pipePath, os.O_RDONLY, 0)
+			if err != nil {
+				// Pipe not available yet, wait patiently
+				select {
+				case <-c.stopChan:
+					return
+				case <-time.After(1 * time.Second):
+					continue
+				}
 			}
 			
-			// 1. Add to central buffer first
-			c.buffer.Add(entry)
+			// Create JSON decoder for pipe
+			decoder := json.NewDecoder(pipe)
 			
-			// 2. Notify all connected readers
-			c.notifyListeners(entry)
-			
-			// 3. Dispatch to all writers of this collector
-			c.mutex.RLock()
-			for _, writer := range c.writers {
-				writer.Write(entry)
+			// Listen for log entries (blocking read)
+			for {
+				select {
+				case <-c.stopChan:
+					pipe.Close()
+					return
+				default:
+					var entry LogEntry
+					if err := decoder.Decode(&entry); err != nil {
+						// Pipe closed - writer disconnected, wait for reconnection
+						pipe.Close()
+						break // Try to reconnect
+					}
+					
+					// 1. Add to central buffer first
+					c.buffer.Add(entry)
+					
+					// 2. Notify all connected readers
+					c.notifyListeners(entry)
+					
+					// 3. Dispatch to all writers of this collector
+					c.mutex.RLock()
+					for _, writer := range c.writers {
+						writer.Write(entry)
+					}
+					c.mutex.RUnlock()
+				}
 			}
-			c.mutex.RUnlock()
+			
+			// Brief pause before reconnection attempt
+			select {
+			case <-c.stopChan:
+				return
+			case <-time.After(100 * time.Millisecond):
+				// Continue to next iteration
+			}
 		}
-		
-		// Brief pause before reconnection attempt
-		time.Sleep(100 * time.Millisecond)
 	}
 }
 
@@ -851,8 +1617,24 @@ func (c *CycLogger) Close() error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	
+	// Stop multi-pipe watcher goroutines
+	c.StopMultiPipeWatcher()
+	
 	for _, writer := range c.writers {
 		writer.Close()
+	}
+	
+	// Auto cleanup session if this is the main app
+	if c.isMainApp && c.appName != "" && c.mainPID > 0 {
+		fmt.Printf("🧹 Auto-cleanup: Removing session %d_%s\n", c.mainPID, c.appName)
+		
+		// Stop background collector first
+		if c.collector != nil {
+			fmt.Println("🛑 Stopping background collector...")
+			c.collector.Close()
+		}
+		
+		CleanupSession(c.mainPID, c.appName)
 	}
 	
 	return nil

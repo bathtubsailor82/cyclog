@@ -4,6 +4,7 @@ go 1.21
 
 require (
 	github.com/charmbracelet/log v0.2.4
+	github.com/fsnotify/fsnotify v1.9.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -17,5 +18,5 @@ require (
 	github.com/muesli/reflow v0.3.0 // indirect
 	github.com/muesli/termenv v0.15.2 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
-	golang.org/x/sys v0.7.0 // indirect
+	golang.org/x/sys v0.13.0 // indirect
 )
