@@ -1,4 +1,4 @@
-module github.com/matthieuzisswiller/cyclog
+module github.com/bathtubsailor82/cyclog
 
 go 1.24.5
 

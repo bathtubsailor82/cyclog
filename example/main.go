@@ -3,7 +3,7 @@ package main
 import (
 	"time"
 
-	"github.com/matthieuzisswiller/cyclog"
+	"github.com/bathtubsailor82/cyclog"
 	"go.uber.org/zap"
 )
 

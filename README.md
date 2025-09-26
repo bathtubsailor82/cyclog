@@ -13,7 +13,7 @@ Simple Go logging package wrapping Uber Zap for structured JSON logging.
 ## Installation
 
 ```bash
-go get github.com/matthieuzisswiller/cyclog
+go get github.com/bathtubsailor82/cyclog
 ```
 
 ## Usage
@@ -24,7 +24,7 @@ go get github.com/matthieuzisswiller/cyclog
 package main
 
 import (
-    "github.com/matthieuzisswiller/cyclog"
+    "github.com/bathtubsailor82/cyclog"
     "go.uber.org/zap"
 )
 
