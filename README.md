@@ -4,11 +4,13 @@ Simple Go logging package wrapping Uber Zap for structured JSON logging.
 
 ## Features
 
-- 📄 **JSON output** to both console and file
-- 🏷️ **Auto-labeling** with app name and site
-- ⚡ **High performance** using Uber Zap
-- 🛠️ **Simple API** for common use cases
-- 🔧 **Flexible** - use with standard Zap features
+▪ ✓ **JSON output** to both console and file
+▪ ◌ **Auto-labeling** with app name, site, and PID
+▪ ⟐ **PID-based files** for process isolation (`app-12345.jsonl`)
+▪ ⚊ **Multi-process support** for parent/child logging
+▪ ⚡ **High performance** using Uber Zap
+▪ ⚒ **Simple API** for common use cases
+▪ ⊙ **Flexible** - use with standard Zap features
 
 ## Installation
 
@@ -64,29 +66,100 @@ logger := cyclog.NewWithConfig(config)
 ## Output
 
 Logs are written to:
-- **Console**: Human-readable in development, JSON in production
-- **File**: `/var/log/{appname}.jsonl` (JSON Lines format)
+▪ **Console**: Human-readable in development, JSON in production
+▪ **File**: `./logs/{appname}-{pid}.jsonl` (JSON Lines format)
 
 Example log entry:
 ```json
 {
     "level": "info",
-    "timestamp": "2025-01-24T15:30:45.123Z",
+    "ts": 1758897151.664017,
+    "caller": "main.go:16",
+    "msg": "User logged in",
     "app": "myapp",
     "site": "production",
-    "message": "User logged in",
+    "pid": 12345,
     "user_id": 123,
     "session": "abc123"
 }
 ```
 
+## Multi-Process Usage
+
+### Parent Process
+```go
+logger := cyclog.New("myapp", "production")
+// Creates: ./logs/myapp-12345.jsonl
+
+// Launch child process with parent PID
+cmd := exec.Command("./worker", "task1")
+cmd.Env = append(os.Environ(), fmt.Sprintf("CYCLOG_PARENT_PID=%d", os.Getpid()))
+cmd.Run()
+```
+
+### Child Process (Go)
+```go
+// Reads CYCLOG_PARENT_PID automatically
+logger := cyclog.New("myapp", "production")
+// Writes to same file: ./logs/myapp-12345.jsonl
+logger.Info("Child process started")
+```
+
+### Child Process (Other Languages)
+```swift
+// Swift example - manual JSON writing
+let parentPID = Int(ProcessInfo.processInfo.environment["CYCLOG_PARENT_PID"] ?? "0")!
+let logFile = "./logs/myapp-\(parentPID).jsonl"
+
+let entry = [
+    "level": "info",
+    "ts": Date().timeIntervalSince1970,
+    "msg": "Swift worker started",
+    "app": "myapp",
+    "pid": ProcessInfo.processInfo.processIdentifier
+]
+// Append JSON to logFile
+```
+
 ## Integration with Log Aggregation
 
 The JSON Lines output format is perfect for:
-- **Grafana Loki** with Promtail
-- **ELK Stack** (Elasticsearch, Logstash, Kibana)
-- **Fluentd/Fluent Bit**
-- Any log aggregation system
+▪ ⚈ **Grafana Loki** with Promtail
+▪ ⚈ **ELK Stack** (Elasticsearch, Logstash, Kibana)
+▪ ⚈ **Fluentd/Fluent Bit**
+▪ ⚈ Any log aggregation system
+
+### Promtail Configuration
+```yaml
+scrape_configs:
+  - job_name: myapp
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: myapp
+          __path__: ./logs/myapp-*.jsonl
+    pipeline_stages:
+      - json:
+          expressions:
+            level: level
+            app: app
+            pid: pid
+      - labels:
+          level:
+          app:
+```
+
+### Viewing Logs in Development
+```bash
+# Real-time log streaming with formatting
+tail -f ./logs/myapp-12345.jsonl | jq -r '"\(.ts | strftime("%H:%M:%S")) [\(.level | ascii_upcase)] \(.msg)"'
+
+# Filter by level
+tail -f ./logs/myapp-12345.jsonl | jq 'select(.level=="error")'
+
+# Filter by PID (useful when multiple instances)
+tail -f ./logs/myapp-*.jsonl | jq 'select(.pid==12345)'
+```
 
 ## License
 
