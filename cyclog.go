@@ -1,7 +1,9 @@
 package cyclog
 
 import (
+	"fmt"
 	"os"
+	"strconv"
 	"go.uber.org/zap"
 	"path/filepath"
 )
@@ -10,17 +12,31 @@ import (
 func New(appName, site string) *zap.Logger {
 	config := zap.NewProductionConfig()
 
-	// Output to console and file
+	// Determine PID for filename - use parent PID if child process
+	pid := os.Getpid()
+	if parentPID := os.Getenv("CYCLOG_PARENT_PID"); parentPID != "" {
+		if ppid, err := strconv.Atoi(parentPID); err == nil {
+			pid = ppid
+		}
+	}
+
+	// Create log file with PID in filename
+	// Use ./logs/ directory for development
+	logDir := "./logs"
+	os.MkdirAll(logDir, 0755) // Create logs directory if it doesn't exist
+	logFile := filepath.Join(logDir, fmt.Sprintf("%s-%d.jsonl", appName, pid))
+
+	// Output to console and PID-specific file
 	config.OutputPaths = []string{
 		"stdout",
-		filepath.Join("/var/log", appName+".jsonl"),
+		logFile,
 	}
 
 	// Add app, site and PID information to all logs
 	config.InitialFields = map[string]interface{}{
 		"app":  appName,
 		"site": site,
-		"pid":  os.Getpid(),
+		"pid":  os.Getpid(), // Keep actual process PID in logs
 	}
 
 	// Build the logger
