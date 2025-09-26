@@ -1,6 +1,7 @@
 package cyclog
 
 import (
+	"os"
 	"go.uber.org/zap"
 	"path/filepath"
 )
@@ -15,10 +16,11 @@ func New(appName, site string) *zap.Logger {
 		filepath.Join("/var/log", appName+".jsonl"),
 	}
 
-	// Add app and site information to all logs
+	// Add app, site and PID information to all logs
 	config.InitialFields = map[string]interface{}{
 		"app":  appName,
 		"site": site,
+		"pid":  os.Getpid(),
 	}
 
 	// Build the logger
@@ -36,6 +38,7 @@ func NewDevelopment(appName string) *zap.Logger {
 	config := zap.NewDevelopmentConfig()
 	config.InitialFields = map[string]interface{}{
 		"app": appName,
+		"pid": os.Getpid(),
 	}
 
 	logger, err := config.Build()
