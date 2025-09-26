@@ -4,7 +4,7 @@ Simple Go logging package wrapping Uber Zap for structured JSON logging.
 
 ## Features
 
-▪ ✓ **JSON output** to both console and file
+▪ ✓ **JSON output** to console+file, file-only, or development mode
 ▪ ◌ **Auto-labeling** with app name, site, and PID
 ▪ ⟐ **PID-based files** for process isolation (`app-12345.jsonl`)
 ▪ ⚊ **Multi-process support** for parent/child logging
@@ -52,6 +52,15 @@ func main() {
 // Pretty console output for development
 logger := cyclog.NewDevelopment("myapp")
 logger.Info("Debug information", zap.String("user", "john"))
+```
+
+### File-Only Mode (Daemons)
+
+```go
+// JSON output ONLY to file (no console output)
+// Perfect for background daemons and services
+logger := cyclog.NewFileOnly("myapp", "production")
+logger.Info("Daemon started") // Only in logs/myapp-12345.jsonl
 ```
 
 ### Advanced Usage

@@ -1,0 +1,2 @@
+{"level":"info","ts":1758901260.681269,"caller":"example/test-fileonly.go:12","msg":"This should ONLY go to file","app":"test-fileonly","pid":93153,"site":"local","test":"file-only"}
+{"level":"error","ts":1758901260.681368,"caller":"example/test-fileonly.go:13","msg":"No console output expected","app":"test-fileonly","pid":93153,"site":"local","mode":"file-only","stacktrace":"main.main\n\t/Users/matthieuzisswiller/Documents/GitHub/cyclog/example/test-fileonly.go:13\nruntime.main\n\t/usr/local/Cellar/go/1.24.5/libexec/src/runtime/proc.go:283"}

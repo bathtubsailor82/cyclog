@@ -1,0 +1,4 @@
+{"level":"info","ts":1758901259.625825,"caller":"example/main.go:16","msg":"Application started","app":"example-app","pid":93123,"site":"local"}
+{"level":"info","ts":1758901259.6268601,"caller":"example/main.go:19","msg":"User action","app":"example-app","pid":93123,"site":"local","user_id":"12345","action":"login","response_time":0.15}
+{"level":"error","ts":1758901259.626954,"caller":"example/main.go:25","msg":"Database connection failed","app":"example-app","pid":93123,"site":"local","database":"postgres","host":"localhost:5432","stacktrace":"main.main\n\t/Users/matthieuzisswiller/Documents/GitHub/cyclog/example/main.go:25\nruntime.main\n\t/usr/local/Cellar/go/1.24.5/libexec/src/runtime/proc.go:283"}
+{"level":"info","ts":1758901259.629905,"caller":"example/main.go:37","msg":"Application finished","app":"example-app","pid":93123,"site":"local"}
