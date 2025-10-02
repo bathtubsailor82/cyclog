@@ -244,3 +244,112 @@ func TestInvalidParentPID(t *testing.T) {
 		t.Fatalf("Log file with current PID not created: %s", expectedFile)
 	}
 }
+
+func TestReadEntries(t *testing.T) {
+	cleanupTestLogs()
+	
+	// Create test logs
+	logger := New("test-read", "test-site")
+	logger.Info("first entry")
+	logger.Warn("second entry") 
+	logger.Error("third entry")
+	logger.Sync()
+	
+	// Test reading all entries
+	entries, err := ReadEntries("test-read", 0)
+	if err != nil {
+		t.Fatalf("ReadEntries failed: %v", err)
+	}
+	
+	if len(entries) != 3 {
+		t.Fatalf("Expected 3 entries, got %d", len(entries))
+	}
+	
+	// Verify entry contents
+	if entries[0].Message != "first entry" || entries[0].Level != "info" {
+		t.Errorf("First entry incorrect: %+v", entries[0])
+	}
+	if entries[1].Message != "second entry" || entries[1].Level != "warn" {
+		t.Errorf("Second entry incorrect: %+v", entries[1])
+	}
+	if entries[2].Message != "third entry" || entries[2].Level != "error" {
+		t.Errorf("Third entry incorrect: %+v", entries[2])
+	}
+	
+	// Test with limit
+	limitedEntries, err := ReadEntries("test-read", 2)
+	if err != nil {
+		t.Fatalf("ReadEntries with limit failed: %v", err)
+	}
+	
+	if len(limitedEntries) != 2 {
+		t.Fatalf("Expected 2 entries with limit, got %d", len(limitedEntries))
+	}
+	
+	// Should get the last 2 entries
+	if limitedEntries[0].Message != "second entry" {
+		t.Errorf("Limited entries should start with second entry, got: %s", limitedEntries[0].Message)
+	}
+}
+
+func TestReadEntriesByPID(t *testing.T) {
+	cleanupTestLogs()
+	
+	currentPID := os.Getpid()
+	
+	// Create test logs
+	logger := New("test-read-pid", "test-site")
+	logger.Info("pid specific entry")
+	logger.Sync()
+	
+	// Test reading by PID
+	entries, err := ReadEntriesByPID("test-read-pid", currentPID, 0)
+	if err != nil {
+		t.Fatalf("ReadEntriesByPID failed: %v", err)
+	}
+	
+	if len(entries) != 1 {
+		t.Fatalf("Expected 1 entry, got %d", len(entries))
+	}
+	
+	if entries[0].Message != "pid specific entry" {
+		t.Errorf("Entry message incorrect: %s", entries[0].Message)
+	}
+	if entries[0].PID != currentPID {
+		t.Errorf("Entry PID incorrect: %d, expected %d", entries[0].PID, currentPID)
+	}
+	
+	// Test with non-existent PID
+	_, err = ReadEntriesByPID("test-read-pid", 99999, 0)
+	if err == nil {
+		t.Error("Expected error for non-existent PID, got nil")
+	}
+}
+
+func TestReadEntriesNonExistentApp(t *testing.T) {
+	cleanupTestLogs()
+	
+	// Test reading from non-existent app
+	_, err := ReadEntries("non-existent-app", 0)
+	if err == nil {
+		t.Error("Expected error for non-existent app, got nil")
+	}
+}
+
+func TestReadEntriesEmptyFile(t *testing.T) {
+	cleanupTestLogs()
+	
+	// Create empty log file
+	os.MkdirAll("./logs", 0755)
+	emptyFile := fmt.Sprintf("./logs/test-empty-%d.jsonl", os.Getpid())
+	os.WriteFile(emptyFile, []byte(""), 0644)
+	
+	entries, err := ReadEntries("test-empty", 0)
+	if err != nil {
+		t.Fatalf("ReadEntries failed on empty file: %v", err)
+	}
+	
+	if len(entries) != 0 {
+		t.Fatalf("Expected 0 entries from empty file, got %d", len(entries))
+	}
+}

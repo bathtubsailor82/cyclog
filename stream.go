@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/charmbracelet/log"
@@ -23,6 +24,29 @@ type LogEntry struct {
 	PID       int                    `json:"pid"`
 	Caller    string                 `json:"caller,omitempty"`
 	Fields    map[string]interface{} `json:"-"`
+}
+
+// ReadEntries reads log entries from the latest log file for the given app
+// Returns the most recent entries up to the specified limit
+func ReadEntries(appName string, limit int) ([]LogEntry, error) {
+	logFile, err := findLatestLogFile(appName)
+	if err != nil {
+		return nil, fmt.Errorf("could not find log file for app '%s': %w", appName, err)
+	}
+	
+	return readLogFile(logFile, limit)
+}
+
+// ReadEntriesByPID reads log entries from a specific PID log file
+// Returns the most recent entries up to the specified limit
+func ReadEntriesByPID(appName string, pid int, limit int) ([]LogEntry, error) {
+	logFile := filepath.Join("logs", fmt.Sprintf("%s-%d.jsonl", appName, pid))
+	
+	if _, err := os.Stat(logFile); os.IsNotExist(err) {
+		return nil, fmt.Errorf("log file not found: %s", logFile)
+	}
+	
+	return readLogFile(logFile, limit)
 }
 
 // Stream finds and displays logs for the given app with pretty formatting
@@ -213,6 +237,67 @@ func prettyPrintLogLine(jsonLine string, prettyLogger *log.Logger) {
 	default:
 		prettyLogger.Info(message, contextFields...)
 	}
+}
+
+// readLogFile reads and parses log entries from a file, returning the most recent entries
+func readLogFile(logFile string, limit int) ([]LogEntry, error) {
+	content, err := os.ReadFile(logFile)
+	if err != nil {
+		return nil, fmt.Errorf("could not read log file: %w", err)
+	}
+
+	lines := strings.Split(strings.TrimSpace(string(content)), "\n")
+	if len(lines) == 0 || (len(lines) == 1 && lines[0] == "") {
+		return []LogEntry{}, nil
+	}
+
+	var entries []LogEntry
+	start := 0
+	if limit > 0 && len(lines) > limit {
+		start = len(lines) - limit
+	}
+
+	for i := start; i < len(lines); i++ {
+		line := strings.TrimSpace(lines[i])
+		if line == "" {
+			continue
+		}
+
+		var rawEntry map[string]interface{}
+		if err := json.Unmarshal([]byte(line), &rawEntry); err != nil {
+			continue // Skip invalid JSON lines
+		}
+
+		entry := LogEntry{
+			Level:   getStringField(rawEntry, "level", "info"),
+			Message: getStringField(rawEntry, "msg", ""),
+			App:     getStringField(rawEntry, "app", "unknown"),
+			Site:    getStringField(rawEntry, "site", ""),
+			Caller:  getStringField(rawEntry, "caller", ""),
+			Fields:  make(map[string]interface{}),
+		}
+
+		// Parse timestamp
+		if ts, ok := rawEntry["ts"].(float64); ok {
+			entry.Timestamp = time.Unix(int64(ts), int64((ts-float64(int64(ts)))*1e9))
+		}
+
+		// Parse PID
+		if pid, ok := rawEntry["pid"].(float64); ok {
+			entry.PID = int(pid)
+		}
+
+		// Extract additional fields (excluding standard ones)
+		for key, value := range rawEntry {
+			if key != "level" && key != "msg" && key != "app" && key != "site" && key != "pid" && key != "ts" && key != "caller" {
+				entry.Fields[key] = value
+			}
+		}
+
+		entries = append(entries, entry)
+	}
+
+	return entries, nil
 }
 
 // getStringField safely extracts a string field from the parsed JSON

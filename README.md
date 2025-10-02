@@ -11,6 +11,7 @@ Simple Go logging package wrapping Uber Zap for structured JSON logging.
 ▪ ⚡ **High performance** using Uber Zap
 ▪ ⚒ **Simple API** for common use cases
 ▪ ⊙ **Flexible** - use with standard Zap features
+▪ 📖 **Log reading** - API to read and parse log entries for integration
 
 ## Installation
 
@@ -61,6 +62,29 @@ logger.Info("Debug information", zap.String("user", "john"))
 // Perfect for background daemons and services
 logger := cyclog.NewFileOnly("myapp", "production")
 logger.Info("Daemon started") // Only in logs/myapp-12345.jsonl
+```
+
+### Reading Log Entries
+
+```go
+// Read recent log entries from latest log file
+entries, err := cyclog.ReadEntries("myapp", 10) // Get last 10 entries
+if err != nil {
+    log.Fatal(err)
+}
+
+for _, entry := range entries {
+    fmt.Printf("[%s] %s: %s\n", 
+        entry.Level, 
+        entry.Timestamp.Format("15:04:05"), 
+        entry.Message)
+}
+
+// Read from specific PID log file
+entries, err := cyclog.ReadEntriesByPID("myapp", 12345, 0) // All entries
+if err != nil {
+    log.Fatal(err)
+}
 ```
 
 ### Advanced Usage
@@ -130,6 +154,28 @@ let entry = [
 // Append JSON to logFile
 ```
 
+### API Integration Example
+
+```go
+// HTTP API endpoint to serve recent logs
+func logsHandler(w http.ResponseWriter, r *http.Request) {
+    appName := r.URL.Query().Get("app")
+    limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+    if limit == 0 {
+        limit = 100
+    }
+    
+    entries, err := cyclog.ReadEntries(appName, limit)
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+    
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(entries)
+}
+```
+
 ## Integration with Log Aggregation
 
 The JSON Lines output format is perfect for:
@@ -137,6 +183,7 @@ The JSON Lines output format is perfect for:
 ▪ ⚈ **ELK Stack** (Elasticsearch, Logstash, Kibana)
 ▪ ⚈ **Fluentd/Fluent Bit**
 ▪ ⚈ Any log aggregation system
+▪ ⚈ **Custom APIs** with ReadEntries functions
 
 ### Promtail Configuration
 ```yaml
