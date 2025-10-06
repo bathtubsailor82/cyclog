@@ -1,6 +1,12 @@
 package cyclog
 
-import "go.uber.org/zap"
+import (
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+)
+
+// Logger is an alias for zap.Logger to avoid importing zap in user code
+type Logger = zap.Logger
 
 // Field is an alias for zap.Field to avoid importing zap in user code
 type Field = zap.Field
@@ -8,6 +14,7 @@ type Field = zap.Field
 // Config types re-exported from zap
 type Config = zap.Config
 type AtomicLevel = zap.AtomicLevel
+type Level = zapcore.Level
 
 // Config constructors re-exported from zap
 var (
@@ -15,17 +22,19 @@ var (
 	NewDevelopmentConfig = zap.NewDevelopmentConfig
 	NewAtomicLevel = zap.NewAtomicLevel
 	NewAtomicLevelAt = zap.NewAtomicLevelAt
+	NewExample = zap.NewExample  // Used in fallback cases
+	NewNop = zap.NewNop  // No-op logger
 )
 
-// Log levels re-exported from zap
+// Log levels re-exported from zapcore
 const (
-	DebugLevel = zap.DebugLevel
-	InfoLevel = zap.InfoLevel
-	WarnLevel = zap.WarnLevel
-	ErrorLevel = zap.ErrorLevel
-	DPanicLevel = zap.DPanicLevel
-	PanicLevel = zap.PanicLevel
-	FatalLevel = zap.FatalLevel
+	DebugLevel = zapcore.DebugLevel
+	InfoLevel = zapcore.InfoLevel
+	WarnLevel = zapcore.WarnLevel
+	ErrorLevel = zapcore.ErrorLevel
+	DPanicLevel = zapcore.DPanicLevel
+	PanicLevel = zapcore.PanicLevel
+	FatalLevel = zapcore.FatalLevel
 )
 
 // Commonly used field constructors re-exported from zap

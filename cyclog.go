@@ -2,15 +2,14 @@ package cyclog
 
 import (
 	"fmt"
-	"go.uber.org/zap"
 	"os"
 	"path/filepath"
 	"strconv"
 )
 
 // New creates a new logger with JSON output to file and console
-func New(appName, site string) *zap.Logger {
-	config := zap.NewProductionConfig()
+func New(appName, site string) *Logger {
+	config := NewProductionConfig()
 
 	// Determine PID for filename - use parent PID if child process
 	pid := os.Getpid()
@@ -43,15 +42,15 @@ func New(appName, site string) *zap.Logger {
 	logger, err := config.Build()
 	if err != nil {
 		// Fallback to basic logger if config fails
-		return zap.NewExample()
+		return NewExample()
 	}
 
 	return logger
 }
 
 // NewFileOnly creates a logger that outputs ONLY to file (no console output)
-func NewFileOnly(appName, site string) *zap.Logger {
-	config := zap.NewProductionConfig()
+func NewFileOnly(appName, site string) *Logger {
+	config := NewProductionConfig()
 
 	// Determine PID for filename - use parent PID if child process
 	pid := os.Getpid()
@@ -82,15 +81,15 @@ func NewFileOnly(appName, site string) *zap.Logger {
 	logger, err := config.Build()
 	if err != nil {
 		// Fallback to basic logger if config fails
-		return zap.NewExample()
+		return NewExample()
 	}
 
 	return logger
 }
 
 // NewDevelopment creates a development logger with pretty console output
-func NewDevelopment(appName string) *zap.Logger {
-	config := zap.NewDevelopmentConfig()
+func NewDevelopment(appName string) *Logger {
+	config := NewDevelopmentConfig()
 	config.InitialFields = map[string]interface{}{
 		"app": appName,
 		"pid": os.Getpid(),
@@ -98,17 +97,17 @@ func NewDevelopment(appName string) *zap.Logger {
 
 	logger, err := config.Build()
 	if err != nil {
-		return zap.NewExample()
+		return NewExample()
 	}
 
 	return logger
 }
 
 // NewWithConfig creates a logger with custom zap configuration
-func NewWithConfig(config zap.Config) *zap.Logger {
+func NewWithConfig(config Config) *Logger {
 	logger, err := config.Build()
 	if err != nil {
-		return zap.NewExample()
+		return NewExample()
 	}
 
 	return logger

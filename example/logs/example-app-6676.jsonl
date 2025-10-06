@@ -1,0 +1,4 @@
+{"level":"info","ts":1759763841.7655098,"caller":"example/main.go:15","msg":"Application started","app":"example-app","pid":6676,"site":"local"}
+{"level":"info","ts":1759763841.765611,"caller":"example/main.go:18","msg":"User action","app":"example-app","pid":6676,"site":"local","user_id":"12345","action":"login","response_time":0.15}
+{"level":"error","ts":1759763841.7656178,"caller":"example/main.go:24","msg":"Database connection failed","app":"example-app","pid":6676,"site":"local","database":"postgres","host":"localhost:5432","stacktrace":"main.main\n\t/Users/localadmin/Documents/Prog/cyclog/example/main.go:24\nruntime.main\n\t/opt/homebrew/Cellar/go/1.24.5/libexec/src/runtime/proc.go:283"}
+{"level":"info","ts":1759763841.7657542,"caller":"example/main.go:36","msg":"Application finished","app":"example-app","pid":6676,"site":"local"}
