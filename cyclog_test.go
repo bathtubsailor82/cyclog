@@ -6,8 +6,6 @@ import (
 	"os"
 	"strings"
 	"testing"
-
-	"go.uber.org/zap"
 )
 
 func TestMain(m *testing.M) {
@@ -31,7 +29,7 @@ func TestNew(t *testing.T) {
 	}
 
 	// Test logging
-	logger.Info("test message", zap.String("key", "value"))
+	logger.Info("test message", String("key", "value"))
 	logger.Sync()
 
 	// Check if log file was created
@@ -116,13 +114,13 @@ func TestNewDevelopment(t *testing.T) {
 	}
 
 	// Just verify it doesn't crash
-	logger.Info("development message", zap.String("env", "dev"))
+	logger.Info("development message", String("env", "dev"))
 	logger.Sync()
 }
 
 func TestNewWithConfig(t *testing.T) {
-	config := zap.NewProductionConfig()
-	config.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
+	config := NewProductionConfig()
+	config.Level = NewAtomicLevelAt(DebugLevel)
 
 	logger := NewWithConfig(config)
 	if logger == nil {

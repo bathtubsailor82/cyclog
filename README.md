@@ -26,24 +26,21 @@ go get github.com/bathtubsailor82/cyclog
 ```go
 package main
 
-import (
-    "github.com/bathtubsailor82/cyclog"
-    "go.uber.org/zap"
-)
+import "github.com/bathtubsailor82/cyclog"
 
 func main() {
     // Create logger for production
     logger := cyclog.New("myapp", "production")
     defer logger.Sync()
 
-    // Use standard Zap logging
+    // Use cyclog field constructors (no need to import zap)
     logger.Info("Application started",
-        zap.String("version", "1.0.0"),
-        zap.Int("port", 8080))
+        cyclog.String("version", "1.0.0"),
+        cyclog.Int("port", 8080))
 
     logger.Error("Something went wrong",
-        zap.Error(err),
-        zap.String("operation", "database_connect"))
+        cyclog.Error(err),
+        cyclog.String("operation", "database_connect"))
 }
 ```
 
@@ -52,7 +49,7 @@ func main() {
 ```go
 // Pretty console output for development
 logger := cyclog.NewDevelopment("myapp")
-logger.Info("Debug information", zap.String("user", "john"))
+logger.Info("Debug information", cyclog.String("user", "john"))
 ```
 
 ### File-Only Mode (Daemons)
@@ -90,9 +87,9 @@ if err != nil {
 ### Advanced Usage
 
 ```go
-// Use with custom Zap configuration
-config := zap.NewProductionConfig()
-config.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
+// Use with custom configuration (no zap import needed)
+config := cyclog.NewProductionConfig()
+config.Level = cyclog.NewAtomicLevelAt(cyclog.DebugLevel)
 logger := cyclog.NewWithConfig(config)
 ```
 
