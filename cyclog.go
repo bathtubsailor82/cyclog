@@ -2,10 +2,10 @@ package cyclog
 
 import (
 	"fmt"
-	"os"
-	"strconv"
 	"go.uber.org/zap"
+	"os"
 	"path/filepath"
+	"strconv"
 )
 
 // New creates a new logger with JSON output to file and console
@@ -112,4 +112,18 @@ func NewWithConfig(config zap.Config) *zap.Logger {
 	}
 
 	return logger
+}
+
+// PrepareChildEnv prepares environment variables for child processes
+// to enable shared logging with the parent process
+func PrepareChildEnv(appName string) []string {
+	env := os.Environ()
+
+	// Add parent PID for shared log file
+	env = append(env, fmt.Sprintf("CYCLOG_PARENT_PID=%d", os.Getpid()))
+
+	// Add app name so child processes use the same log file name
+	env = append(env, fmt.Sprintf("CYCLOG_APP_NAME=%s", appName))
+
+	return env
 }

@@ -124,9 +124,16 @@ Example log entry:
 logger := cyclog.New("myapp", "production")
 // Creates: ./logs/myapp-12345.jsonl
 
-// Launch child process with parent PID
+// Launch child process with shared logging (recommended)
 cmd := exec.Command("./worker", "task1")
-cmd.Env = append(os.Environ(), fmt.Sprintf("CYCLOG_PARENT_PID=%d", os.Getpid()))
+cmd.Env = cyclog.PrepareChildEnv("myapp")
+cmd.Run()
+
+// Or manually (legacy approach)
+cmd := exec.Command("./worker", "task1")
+cmd.Env = append(os.Environ(), 
+    fmt.Sprintf("CYCLOG_PARENT_PID=%d", os.Getpid()),
+    "CYCLOG_APP_NAME=myapp")
 cmd.Run()
 ```
 
@@ -140,15 +147,16 @@ logger.Info("Child process started")
 
 ### Child Process (Other Languages)
 ```swift
-// Swift example - manual JSON writing
-let parentPID = Int(ProcessInfo.processInfo.environment["CYCLOG_PARENT_PID"] ?? "0")!
-let logFile = "./logs/myapp-\(parentPID).jsonl"
+// Swift example - reads both CYCLOG_PARENT_PID and CYCLOG_APP_NAME
+let parentPID = ProcessInfo.processInfo.environment["CYCLOG_PARENT_PID"] ?? "0"
+let appName = ProcessInfo.processInfo.environment["CYCLOG_APP_NAME"] ?? "unknown"
+let logFile = "./logs/\(appName)-\(parentPID).jsonl"
 
 let entry = [
     "level": "info",
     "ts": Date().timeIntervalSince1970,
     "msg": "Swift worker started",
-    "app": "myapp",
+    "app": appName,
     "pid": ProcessInfo.processInfo.processIdentifier
 ]
 // Append JSON to logFile

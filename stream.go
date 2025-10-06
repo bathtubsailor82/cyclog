@@ -33,7 +33,7 @@ func ReadEntries(appName string, limit int) ([]LogEntry, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not find log file for app '%s': %w", appName, err)
 	}
-	
+
 	return readLogFile(logFile, limit)
 }
 
@@ -41,11 +41,11 @@ func ReadEntries(appName string, limit int) ([]LogEntry, error) {
 // Returns the most recent entries up to the specified limit
 func ReadEntriesByPID(appName string, pid int, limit int) ([]LogEntry, error) {
 	logFile := filepath.Join("logs", fmt.Sprintf("%s-%d.jsonl", appName, pid))
-	
+
 	if _, err := os.Stat(logFile); os.IsNotExist(err) {
 		return nil, fmt.Errorf("log file not found: %s", logFile)
 	}
-	
+
 	return readLogFile(logFile, limit)
 }
 
